@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bio Generator App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Dinner Tonight❤️</h1>
+        <form id="bioForm" class="p-4 border rounded bg-light">
+            <div class="mb-3">
+                <label for="profession" class="form-label">Profession</label>
+                <input type="text" class="form-control" id="profession" placeholder="e.g., Software Engineer" required>
+            </div>
+            <div class="mb-3">
+                <label for="interests" class="form-label">Interests</label>
+                <input type="text" class="form-control" id="interests" placeholder="e.g., technology, photography" required>
+            </div>
+            <div class="mb-3">
+                <label for="hobbies" class="form-label">Hobbies</label>
+                <input type="text" class="form-control" id="hobbies" placeholder="e.g., hiking, cooking" required>
+            </div>
+            <div class="mb-3">
+                <label for="goals" class="form-label">Relationship Goals</label>
+                <input type="text" class="form-control" id="goals" placeholder="e.g., long-term relationship, friendship" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" id="generateBtn">Generate Bio</button>
+        </form>
+        <div class="mt-4" id="bioResult" style="display: none;">
+            <h4>Generated Bio:</h4>
+            <p id="bioText" class="bg-white p-3 border rounded"></p>
+            <button class="btn btn-outline-primary mt-2" id="regenerateBtn">Generate Another Bio</button>
+        </div>
+        <div class="alert alert-danger mt-3" id="errorAlert" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const form = document.getElementById('bioForm');
+        const bioResult = document.getElementById('bioResult');
+        const bioText = document.getElementById('bioText');
+        const generateBtn = document.getElementById('generateBtn');
+        const regenerateBtn = document.getElementById('regenerateBtn');
+        const errorAlert = document.getElementById('errorAlert');
+
+        async function generateBio() {
+            const profession = document.getElementById('profession').value.trim();
+            const interests = document.getElementById('interests').value.trim();
+            const hobbies = document.getElementById('hobbies').value.trim();
+            const goals = document.getElementById('goals').value.trim();
+
+            // Input validation
+            if (!profession || !interests || !hobbies || !goals) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            // Show loading state
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+            errorAlert.style.display = 'none';
+
+            try {
+                const response = await fetch('/api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        profession,
+                        interests,
+                        hobbies,
+                        goals
+                    }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.bio) {
+                        bioText.textContent = result.bio;
+                        bioResult.style.display = 'block';
+                    } else {
+                        showError('No bio was generated. Please try again.');
+                    }
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Error generating bio. Please try again.');
+                }
+            } catch (error) {
+                showError('Error connecting to the server. Please try again.');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Bio';
+            }
+        }
+
+        function showError(message) {
+            errorAlert.textContent = message;
+            errorAlert.style.display = 'block';
+            bioResult.style.display = 'none';
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            generateBio();
+        });
+
+        regenerateBtn.addEventListener('click', generateBio);
+    </script>
+</body>
+</html>
