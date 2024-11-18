@@ -2,11 +2,18 @@ from flask import Flask, request, jsonify, render_template
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import torch
 import re
+import os
 
 app = Flask(__name__)
 
 # Initialize model and tokenizer explicitly for better control
-tokenizer = AutoTokenizer.from_pretrained("gpt2-medium")
+tokenizer = AutoTokenizer.from_pretrained("gpt2-medium", 
+    truncation_side='left',  # or 'right'
+    truncation=True,  # Explicitly enable truncation
+    model_max_length=512  # Set an appropriate max length
+)
+
+# Separate model initialization
 model = AutoModelForCausalLM.from_pretrained("gpt2-medium")
 
 # Create pipeline with the initialized model and tokenizer
@@ -17,7 +24,6 @@ generator = pipeline(
     framework="pt",
     device=-1  # Use CPU. Change to 0 for GPU if available
 )
-
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -48,19 +54,18 @@ def generate_bio():
         for prompt in prompts:
             # Generate with different parameters for variety
             response = generator(
-                prompt,
-                max_length=150,
-                num_return_sequences=2,
-                temperature=0.9,
-                top_p=0.92,
-                do_sample=True,
-                no_repeat_ngram_size=2,
-                top_k=50,
-                early_stopping=True,
-                pad_token_id=tokenizer.eos_token_id,
-                eos_token_id=tokenizer.eos_token_id
-            )
-            
+    prompt,
+    max_length=150,
+    num_return_sequences=2,
+    temperature=0.9,
+    top_p=0.92,
+    do_sample=True,
+    no_repeat_ngram_size=2,
+    top_k=50,
+    pad_token_id=tokenizer.eos_token_id,
+    eos_token_id=tokenizer.eos_token_id
+)
+
             for gen_text in response:
                 cleaned_bio = clean_bio(gen_text['generated_text'], prompt)
                 if is_valid_bio(cleaned_bio, profession, interests, hobbies):
@@ -79,13 +84,13 @@ def generate_bio():
         )
         
         backup_response = generator(
-            backup_prompt,
-            max_length=200,
-            num_return_sequences=1,
-            temperature=0.7,
-            top_p=0.9,
-            do_sample=True
-        )
+    backup_prompt,
+    max_length=200,
+    num_return_sequences=1,
+    temperature=0.7,
+    top_p=0.9,
+    do_sample=True
+)
         
         backup_bio = clean_bio(backup_response[0]['generated_text'], backup_prompt)
         
@@ -178,5 +183,8 @@ def create_dynamic_fallback_bio(profession, interests, hobbies, goals):
     import random
     return random.choice(templates)
 
+
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
