@@ -1,3 +1,4 @@
 flask==2.1.2
 transformers
 torch
+werkzeug>=2.0.0
