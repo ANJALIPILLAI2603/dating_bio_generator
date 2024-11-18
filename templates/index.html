@@ -51,13 +51,11 @@
             const hobbies = document.getElementById('hobbies').value.trim();
             const goals = document.getElementById('goals').value.trim();
 
-            // Input validation
             if (!profession || !interests || !hobbies || !goals) {
                 showError('Please fill in all fields');
                 return;
             }
 
-            // Show loading state
             generateBtn.disabled = true;
             generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
             errorAlert.style.display = 'none';

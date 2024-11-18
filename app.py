@@ -6,23 +6,20 @@ import os
 
 app = Flask(__name__)
 
-# Initialize model and tokenizer explicitly for better control
 tokenizer = AutoTokenizer.from_pretrained("gpt2-medium", 
-    truncation_side='left',  # or 'right'
-    truncation=True,  # Explicitly enable truncation
-    model_max_length=512  # Set an appropriate max length
+    truncation_side='left',  
+    truncation=True,  
+    model_max_length=512  
 )
 
-# Separate model initialization
 model = AutoModelForCausalLM.from_pretrained("gpt2-medium")
 
-# Create pipeline with the initialized model and tokenizer
 generator = pipeline(
     'text-generation',
     model=model,
     tokenizer=tokenizer,
     framework="pt",
-    device=-1  # Use CPU. Change to 0 for GPU if available
+    device=-1  
 )
 @app.route('/')
 def home():
@@ -41,7 +38,6 @@ def generate_bio():
         if not all([profession, interests, hobbies, goals]):
             return jsonify({"error": "All fields are required"}), 400
 
-        # Create multiple prompt variations for diversity
         prompts = [
             f"Dating Profile: {profession} seeking {goals}. My passion for {interests} drives me, and I love spending time {hobbies}. I believe that",
             
@@ -52,7 +48,6 @@ def generate_bio():
         
         generated_bios = []
         for prompt in prompts:
-            # Generate with different parameters for variety
             response = generator(
     prompt,
     max_length=150,
@@ -71,12 +66,10 @@ def generate_bio():
                 if is_valid_bio(cleaned_bio, profession, interests, hobbies):
                     generated_bios.append(cleaned_bio)
 
-        # If we got any valid generations, choose the best one
         if generated_bios:
             best_bio = choose_best_bio(generated_bios, profession, interests, hobbies)
             return jsonify({"bio": best_bio})
         
-        # If all generations failed, try one more time with different parameters
         backup_prompt = (
             f"Profile of a {profession}: Beyond my work in technology, I'm deeply passionate about "
             f"{interests}. In my free time, you'll find me {hobbies}. "
@@ -94,7 +87,6 @@ def generate_bio():
         
         backup_bio = clean_bio(backup_response[0]['generated_text'], backup_prompt)
         
-        # Only use fallback if backup generation also fails
         if not is_valid_bio(backup_bio, profession, interests, hobbies):
             backup_bio = create_dynamic_fallback_bio(profession, interests, hobbies, goals)
 
@@ -106,28 +98,22 @@ def generate_bio():
 
 def clean_bio(text, prompt):
     """Clean and format the generated bio text."""
-    # Remove the prompt
     text = text.replace(prompt, '')
     
-    # Remove common prefixes
     prefixes = ['Dating Profile:', 'Bio:', 'About me:', 'Profile:']
     for prefix in prefixes:
         text = re.sub(f'^{prefix}', '', text, flags=re.IGNORECASE).strip()
     
-    # Clean up whitespace
     text = ' '.join(text.split())
     
-    # Split into sentences
     sentences = re.split(r'[.!?]+', text)
     complete_sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
     
     if not complete_sentences:
         return text
     
-    # Take up to 4 complete sentences
     final_text = '. '.join(complete_sentences[:4]).strip()
     
-    # Ensure proper capitalization and punctuation
     if final_text:
         final_text = final_text[0].upper() + final_text[1:]
         if not final_text[-1] in '.!?':
@@ -140,11 +126,9 @@ def is_valid_bio(bio, profession, interests, hobbies):
     if not bio or len(bio.split()) < 20:
         return False
         
-    # Check for key content inclusion
     keywords = [profession.lower(), interests.lower(), hobbies.lower()]
     word_count = sum(1 for keyword in keywords if keyword in bio.lower())
     
-    # At least 2 of the 3 key elements should be present
     return word_count >= 2
 
 def choose_best_bio(bios, profession, interests, hobbies):
@@ -152,16 +136,13 @@ def choose_best_bio(bios, profession, interests, hobbies):
     scored_bios = []
     for bio in bios:
         score = 0
-        # Length score (prefer longer, but not too long)
         words = len(bio.split())
         if 30 <= words <= 100:
             score += 5
         
-        # Keyword inclusion score
         keywords = [profession.lower(), interests.lower(), hobbies.lower()]
         score += sum(3 for keyword in keywords if keyword in bio.lower())
         
-        # Sentence structure score
         sentences = re.split(r'[.!?]+', bio)
         if 2 <= len(sentences) <= 4:
             score += 3
